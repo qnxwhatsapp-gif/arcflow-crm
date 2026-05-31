@@ -41,14 +41,6 @@ RETURNS TEXT AS $$
   SELECT role FROM profiles WHERE id = auth.uid();
 $$ LANGUAGE sql SECURITY DEFINER STABLE;
 
--- Helper: get project IDs accessible to current architect
-CREATE OR REPLACE FUNCTION get_architect_project_ids()
-RETURNS SETOF UUID AS $$
-  SELECT id FROM projects WHERE lead_id = auth.uid()
-  UNION
-  SELECT DISTINCT project_id FROM tasks WHERE assignee_id = auth.uid()
-$$ LANGUAGE sql SECURITY DEFINER STABLE;
-
 -- Projects
 CREATE TABLE projects (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -120,6 +112,15 @@ CREATE TABLE permissions (
   can_view_financials BOOLEAN DEFAULT FALSE,
   can_moderate_comments BOOLEAN DEFAULT TRUE
 );
+
+-- Helper: get project IDs accessible to current architect
+-- (defined here, after projects + tasks tables exist)
+CREATE OR REPLACE FUNCTION get_architect_project_ids()
+RETURNS SETOF UUID AS $$
+  SELECT id FROM projects WHERE lead_id = auth.uid()
+  UNION
+  SELECT DISTINCT project_id FROM tasks WHERE assignee_id = auth.uid()
+$$ LANGUAGE sql SECURITY DEFINER STABLE;
 
 -- ===================== ROW LEVEL SECURITY =====================
 

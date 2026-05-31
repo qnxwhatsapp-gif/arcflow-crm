@@ -41,6 +41,14 @@ RETURNS TEXT AS $$
   SELECT role FROM profiles WHERE id = auth.uid();
 $$ LANGUAGE sql SECURITY DEFINER STABLE;
 
+-- Helper: get project IDs accessible to current architect
+CREATE OR REPLACE FUNCTION get_architect_project_ids()
+RETURNS SETOF UUID AS $$
+  SELECT id FROM projects WHERE lead_id = auth.uid()
+  UNION
+  SELECT DISTINCT project_id FROM tasks WHERE assignee_id = auth.uid()
+$$ LANGUAGE sql SECURITY DEFINER STABLE;
+
 -- Projects
 CREATE TABLE projects (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -129,15 +137,11 @@ CREATE POLICY "profiles_select_own" ON profiles FOR SELECT USING (
 );
 CREATE POLICY "profiles_update_own" ON profiles FOR UPDATE USING (id = auth.uid());
 CREATE POLICY "profiles_update_principal" ON profiles FOR UPDATE USING (get_user_role() = 'principal');
-CREATE POLICY "profiles_insert_trigger" ON profiles FOR INSERT WITH CHECK (id = auth.uid());
 
 -- PROJECTS
 CREATE POLICY "projects_principal" ON projects FOR ALL USING (get_user_role() = 'principal');
 CREATE POLICY "projects_architect_select" ON projects FOR SELECT USING (
-  get_user_role() = 'architect' AND (
-    lead_id = auth.uid() OR
-    id IN (SELECT project_id FROM tasks WHERE assignee_id = auth.uid())
-  )
+  get_user_role() = 'architect' AND id IN (SELECT get_architect_project_ids())
 );
 CREATE POLICY "projects_client_select" ON projects FOR SELECT USING (
   get_user_role() = 'client' AND client_id = auth.uid()
@@ -146,12 +150,7 @@ CREATE POLICY "projects_client_select" ON projects FOR SELECT USING (
 -- TASKS
 CREATE POLICY "tasks_principal" ON tasks FOR ALL USING (get_user_role() = 'principal');
 CREATE POLICY "tasks_architect" ON tasks FOR ALL USING (
-  get_user_role() = 'architect' AND
-  project_id IN (
-    SELECT id FROM projects WHERE lead_id = auth.uid()
-    UNION
-    SELECT project_id FROM tasks t2 WHERE t2.assignee_id = auth.uid()
-  )
+  get_user_role() = 'architect' AND project_id IN (SELECT get_architect_project_ids())
 );
 CREATE POLICY "tasks_client_select" ON tasks FOR SELECT USING (
   get_user_role() = 'client' AND
@@ -162,11 +161,7 @@ CREATE POLICY "tasks_client_select" ON tasks FOR SELECT USING (
 CREATE POLICY "subtasks_principal" ON subtasks FOR ALL USING (get_user_role() = 'principal');
 CREATE POLICY "subtasks_architect" ON subtasks FOR ALL USING (
   get_user_role() = 'architect' AND
-  task_id IN (SELECT id FROM tasks WHERE project_id IN (
-    SELECT id FROM projects WHERE lead_id = auth.uid()
-    UNION
-    SELECT project_id FROM tasks t2 WHERE t2.assignee_id = auth.uid()
-  ))
+  task_id IN (SELECT id FROM tasks WHERE project_id IN (SELECT get_architect_project_ids()))
 );
 CREATE POLICY "subtasks_client_select" ON subtasks FOR SELECT USING (
   get_user_role() = 'client' AND
@@ -183,17 +178,19 @@ CREATE POLICY "worklogs_architect" ON work_logs FOR ALL USING (
 
 -- COMMENTS
 CREATE POLICY "comments_principal" ON comments FOR ALL USING (get_user_role() = 'principal');
-CREATE POLICY "comments_architect" ON comments FOR ALL USING (
-  get_user_role() = 'architect' AND
-  project_id IN (
-    SELECT id FROM projects WHERE lead_id = auth.uid()
-    UNION
-    SELECT project_id FROM tasks WHERE assignee_id = auth.uid()
-  )
+
+CREATE POLICY "comments_architect_select" ON comments FOR SELECT USING (
+  get_user_role() = 'architect' AND project_id IN (SELECT get_architect_project_ids())
 );
-CREATE POLICY "comments_client" ON comments FOR ALL USING (
-  get_user_role() = 'client' AND
-  project_id IN (SELECT id FROM projects WHERE client_id = auth.uid())
+CREATE POLICY "comments_architect_insert" ON comments FOR INSERT WITH CHECK (
+  get_user_role() = 'architect' AND project_id IN (SELECT get_architect_project_ids()) AND author_id = auth.uid()
+);
+
+CREATE POLICY "comments_client_select" ON comments FOR SELECT USING (
+  get_user_role() = 'client' AND project_id IN (SELECT id FROM projects WHERE client_id = auth.uid())
+);
+CREATE POLICY "comments_client_insert" ON comments FOR INSERT WITH CHECK (
+  get_user_role() = 'client' AND project_id IN (SELECT id FROM projects WHERE client_id = auth.uid()) AND author_id = auth.uid()
 );
 
 -- PERMISSIONS (read-only for non-principals)

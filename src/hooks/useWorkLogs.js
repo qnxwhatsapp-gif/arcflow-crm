@@ -16,9 +16,17 @@ export function useWorkLogs(projectId) {
     setLoading(false)
   }
 
-  useEffect(() => { fetchWorkLogs() }, [projectId])
+  useEffect(() => {
+    fetchWorkLogs()
 
-  async function logWork({ projectId, taskId, userId, duration, unit, date, notes }) {
+    const channel = supabase.channel(`work-logs-${projectId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'work_logs', filter: `project_id=eq.${projectId}` }, fetchWorkLogs)
+      .subscribe()
+
+    return () => supabase.removeChannel(channel)
+  }, [projectId])
+
+  async function logWork({ taskId, userId, duration, unit, date, notes }) {
     const { error } = await supabase.from('work_logs').insert({
       project_id: projectId, task_id: taskId, user_id: userId,
       duration, unit, date, notes
@@ -29,7 +37,7 @@ export function useWorkLogs(projectId) {
 
   function getTotalHours() {
     return workLogs.reduce((sum, w) => {
-      return sum + (w.unit === 'days' ? parseFloat(w.duration) * 8 : parseFloat(w.duration))
+      return sum + (w.unit === 'days' ? (parseFloat(w.duration) || 0) * 8 : (parseFloat(w.duration) || 0))
     }, 0)
   }
 

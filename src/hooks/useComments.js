@@ -26,7 +26,7 @@ export function useComments(projectId) {
     return () => supabase.removeChannel(channel)
   }, [projectId])
 
-  async function addComment({ projectId, authorId, text }) {
+  async function addComment({ authorId, text }) {
     const { error } = await supabase.from('comments').insert({ project_id: projectId, author_id: authorId, text })
     return { error }
   }

@@ -17,7 +17,7 @@ export function useProjects() {
   useEffect(() => {
     fetchProjects()
 
-    const channel = supabase.channel('projects-changes')
+    const channel = supabase.channel('projects-changes-' + Math.random().toString(36).slice(2))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'projects' }, fetchProjects)
       .subscribe()
 

@@ -27,7 +27,7 @@ export function useTasks(projectId) {
     return () => supabase.removeChannel(channel)
   }, [projectId])
 
-  async function createTask({ projectId, title, description, phase, assigneeId, priority, deadline }) {
+  async function createTask({ title, description, phase, assigneeId, priority, deadline }) {
     const { data, error } = await supabase.from('tasks').insert({
       project_id: projectId, title, description, phase,
       assignee_id: assigneeId, priority, deadline

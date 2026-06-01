@@ -4,20 +4,47 @@ import { supabase } from '../../lib/supabase'
 export default function AddClientModal({ open, onClose, onAdded }) {
   const [form, setForm] = useState({ name: '', company: '', email: '' })
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [success, setSuccess] = useState('')
 
   async function handleSubmit(e) {
     e.preventDefault()
     setError('')
-    const initials = form.name.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase()
-    const { error: err } = await supabase.from('profiles').insert({
-      id: crypto.randomUUID(),
-      name: form.name, company: form.company, email: form.email,
-      role: 'client', avatar_initials: initials
-    })
-    if (err) { setError(err.message); return }
+    setSuccess('')
+    setLoading(true)
+
+    const { data: { session } } = await supabase.auth.getSession()
+
+    const res = await fetch(
+      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-user`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+        },
+        body: JSON.stringify({
+          email: form.email,
+          name: form.name,
+          role: 'client',
+          company: form.company,
+        }),
+      }
+    )
+
+    const json = await res.json()
+    setLoading(false)
+
+    if (!res.ok || json.error) {
+      setError(json.error || 'Failed to create client')
+      return
+    }
+
+    setSuccess(`✓ ${form.name} registered. A password-setup email has been sent to ${form.email}.`)
     setForm({ name: '', company: '', email: '' })
     onAdded?.()
-    onClose()
+    setTimeout(() => { setSuccess(''); onClose() }, 3000)
   }
 
   if (!open) return null
@@ -32,17 +59,32 @@ export default function AddClientModal({ open, onClose, onAdded }) {
         <form onSubmit={handleSubmit}>
           <div className="modal-body">
             {error && <p style={{ color: 'var(--priority-high)', marginBottom: 12, fontSize: 13 }}>{error}</p>}
-            {[['name','Full Name','text','e.g. Richard Hendricks'],['company','Company / Organization','text','e.g. Pied Piper LLC'],['email','Email Address','email','r.hendricks@piedpiper.com']].map(([key,label,type,ph]) => (
+            {success && <p style={{ color: 'var(--status-completed)', marginBottom: 12, fontSize: 13 }}>{success}</p>}
+
+            {[
+              ['name', 'Full Name', 'text', 'e.g. Richard Hendricks'],
+              ['company', 'Company / Organization', 'text', 'e.g. Pied Piper LLC'],
+              ['email', 'Email Address', 'email', 'r.hendricks@piedpiper.com'],
+            ].map(([key, label, type, ph]) => (
               <div className="modal-form-group" key={key}>
                 <label className="modal-label">{label}</label>
-                <input type={type} className="modal-input" placeholder={ph} required value={form[key]} onChange={e => setForm(f => ({...f,[key]:e.target.value}))} />
+                <input
+                  type={type} className="modal-input" placeholder={ph}
+                  required value={form[key]}
+                  onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))}
+                />
               </div>
             ))}
-            <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 8 }}>The client will log in via Google using this email address.</p>
+
+            <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 8 }}>
+              A password-setup email will be sent so the client can log in.
+            </p>
           </div>
           <div className="modal-footer">
             <button type="button" className="action-btn" onClick={onClose}>Cancel</button>
-            <button type="submit" className="action-btn primary">Register Client</button>
+            <button type="submit" className="action-btn primary" disabled={loading}>
+              {loading ? 'Creating...' : 'Register Client'}
+            </button>
           </div>
         </form>
       </div>

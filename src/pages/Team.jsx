@@ -45,6 +45,16 @@ export default function Team() {
     loadData()
   }
 
+  const [resetSent, setResetSent] = useState(null) // stores email string when reset was sent
+
+  async function handleResetPassword(email) {
+    await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + '/reset-password',
+    })
+    setResetSent(email)
+    setTimeout(() => setResetSent(null), 3000)
+  }
+
   return (
     <>
       <div className="content-block" style={{ marginBottom: 24 }}>
@@ -58,7 +68,7 @@ export default function Team() {
         </div>
         <div style={{ overflowX: 'auto' }}>
           <table className="project-list-table">
-            <thead><tr><th>Name</th><th>Role</th><th>Email</th><th>Assigned Projects</th>{profile?.role === 'principal' && <th>Change Role</th>}</tr></thead>
+            <thead><tr><th>Name</th><th>Role</th><th>Email</th><th>Assigned Projects</th>{profile?.role === 'principal' && <th>Change Role</th>}{profile?.role === 'principal' && <th>Password</th>}</tr></thead>
             <tbody>
               {staff.map(u => (
                 <tr key={u.id}>
@@ -69,10 +79,23 @@ export default function Team() {
                   {profile?.role === 'principal' && (
                     <td>
                       <select className="modal-select" style={{ fontSize: 12, padding: '4px 8px', height: 'auto' }} value={u.role} onChange={e => handleRoleChange(u.id, e.target.value)}>
-                        <option value="architect">architect</option>
-                        <option value="principal">principal</option>
-                        <option value="pending">pending</option>
+                        <option value="principal">Principal Architect</option>
+                        <option value="architect">Project Architect</option>
+                        <option value="manager">Project Manager</option>
+                        <option value="intern">Intern / Junior</option>
+                        <option value="pending">Pending (no access)</option>
                       </select>
+                    </td>
+                  )}
+                  {profile?.role === 'principal' && (
+                    <td>
+                      {resetSent === u.email ? (
+                        <span style={{ fontSize: 12, color: 'var(--status-completed)' }}>✓ Email sent</span>
+                      ) : (
+                        <button className="action-btn" style={{ fontSize: 11, padding: '3px 8px' }} onClick={() => handleResetPassword(u.email)}>
+                          Reset Password
+                        </button>
+                      )}
                     </td>
                   )}
                 </tr>
@@ -93,7 +116,7 @@ export default function Team() {
         </div>
         <div style={{ overflowX: 'auto' }}>
           <table className="project-list-table">
-            <thead><tr><th>Client Name</th><th>Company</th><th>Email</th><th>Associated Project</th></tr></thead>
+            <thead><tr><th>Client Name</th><th>Company</th><th>Email</th><th>Associated Project</th>{profile?.role === 'principal' && <th>Password</th>}</tr></thead>
             <tbody>
               {clients.map(u => (
                 <tr key={u.id}>
@@ -101,6 +124,17 @@ export default function Team() {
                   <td>{u.company || '–'}</td>
                   <td>{u.email}</td>
                   <td style={{ fontSize: 12 }}>{getAssignedProjects(u.id)}</td>
+                  {profile?.role === 'principal' && (
+                    <td>
+                      {resetSent === u.email ? (
+                        <span style={{ fontSize: 12, color: 'var(--status-completed)' }}>✓ Email sent</span>
+                      ) : (
+                        <button className="action-btn" style={{ fontSize: 11, padding: '3px 8px' }} onClick={() => handleResetPassword(u.email)}>
+                          Reset Password
+                        </button>
+                      )}
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>

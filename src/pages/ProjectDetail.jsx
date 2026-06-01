@@ -14,6 +14,7 @@ import AddTaskModal from '../components/modals/AddTaskModal'
 import TaskDetailModal from '../components/modals/TaskDetailModal'
 import LogWorkModal from '../components/modals/LogWorkModal'
 import StatCard from '../components/dashboard/StatCard'
+import DeadlineBadge from '../components/ui/DeadlineBadge'
 
 const PHASES = { SD: 'Schematic Design (SD)', DD: 'Design Development (DD)', CD: 'Construction Documents (CD)', CA: 'Construction Admin (CA)' }
 
@@ -117,12 +118,46 @@ export default function ProjectDetail() {
 
       <div className="project-tab-contents">
         {activeTab === 'overview' && (
-          <div className="dashboard-grid">
-            <StatCard title="Overall Progress" value={`${tasks.length > 0 ? Math.round((completedTasks / tasks.length) * 100) : 0}%`} desc={`${completedTasks}/${tasks.length} milestones resolved`} color="teal" />
-            <StatCard title="Subtask Deliverables" value={`${completedSubs}/${totalSubs}`} desc={`${totalSubs > 0 ? Math.round((completedSubs/totalSubs)*100) : 0}% subtask completion`} color="green" />
-            <StatCard title="Total Effort Logged" value={`${getTotalHours()} hrs`} desc="From team timesheet submissions" color="gold" />
-            <StatCard title="Active Phase" value={project.phase} desc={PHASES[project.phase]} color="purple" />
-          </div>
+          <>
+            <div className="dashboard-grid">
+              <StatCard title="Overall Progress" value={`${tasks.length > 0 ? Math.round((completedTasks / tasks.length) * 100) : 0}%`} desc={`${completedTasks}/${tasks.length} milestones resolved`} color="teal" />
+              <StatCard title="Subtask Deliverables" value={`${completedSubs}/${totalSubs}`} desc={`${totalSubs > 0 ? Math.round((completedSubs/totalSubs)*100) : 0}% subtask completion`} color="green" />
+              <StatCard title="Total Effort Logged" value={`${getTotalHours()} hrs`} desc="From team timesheet submissions" color="gold" />
+              <StatCard title="Active Phase" value={project.phase} desc={PHASES[project.phase]} color="purple" />
+            </div>
+            {tasks.length > 0 && (
+              <div className="content-block" style={{ marginTop: 20 }}>
+                <div className="block-header">
+                  <h3 className="block-title"><i className="fa-solid fa-list-check"></i> Task Overview</h3>
+                </div>
+                <table className="project-list-table">
+                  <thead>
+                    <tr>
+                      <th>Task</th>
+                      <th>Priority</th>
+                      <th>Status</th>
+                      <th>Deadline</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {tasks.map(t => (
+                      <tr key={t.id} className="project-row" onClick={() => handleTaskClick(t)}>
+                        <td>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <strong>{t.title}</strong>
+                            {t.status !== 'completed' && <DeadlineBadge deadline={t.deadline} />}
+                          </div>
+                        </td>
+                        <td><span className={`priority-tag priority-${(t.priority || 'medium').toLowerCase()}`}>{t.priority || 'Medium'}</span></td>
+                        <td><span style={{ fontSize: 12, color: 'var(--text-secondary)', textTransform: 'capitalize' }}>{t.status}</span></td>
+                        <td>{t.deadline ? new Date(t.deadline).toLocaleDateString() : '–'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </>
         )}
 
         {activeTab === 'tasks' && (

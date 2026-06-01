@@ -1,3 +1,4 @@
+// src/pages/Dashboard.jsx
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
@@ -6,6 +7,8 @@ import { useProjects } from '../hooks/useProjects'
 import { supabase } from '../lib/supabase'
 import StatCard from '../components/dashboard/StatCard'
 import ActivityFeed from '../components/dashboard/ActivityFeed'
+import DeadlineBadge from '../components/ui/DeadlineBadge'
+import { getDeadlineStatus } from '../utils/deadlineStatus'
 
 export default function Dashboard() {
   const { profile } = useAuth()
@@ -45,6 +48,27 @@ export default function Dashboard() {
   const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0
   const portfolioBudget = userProjects.reduce((s, p) => s + (p.budget || 0), 0)
 
+  // Collect all at-risk items
+  const attentionItems = []
+  userProjects.forEach(p => {
+    const pStatus = getDeadlineStatus(p.deadline)
+    if (pStatus === 'overdue' || pStatus === 'soon') {
+      attentionItems.push({ type: 'project', id: p.id, label: p.name, deadline: p.deadline, status: pStatus, projectId: p.id, projectName: '' })
+    }
+    ;(p.tasks || []).forEach(t => {
+      if (t.status === 'completed') return
+      const tStatus = getDeadlineStatus(t.deadline)
+      if (tStatus === 'overdue' || tStatus === 'soon') {
+        attentionItems.push({ type: 'task', id: t.id, label: t.title, deadline: t.deadline, status: tStatus, projectId: p.id, projectName: p.name })
+      }
+    })
+  })
+  // Sort: overdue first, then soon; within each group sort by deadline ascending
+  attentionItems.sort((a, b) => {
+    if (a.status !== b.status) return a.status === 'overdue' ? -1 : 1
+    return new Date(a.deadline) - new Date(b.deadline)
+  })
+
   return (
     <>
       <div className="dashboard-grid">
@@ -57,6 +81,47 @@ export default function Dashboard() {
         <StatCard title="Task Completion" value={`${completionRate}%`} desc={`${completedTasks} of ${totalTasks} milestones`} color="green" />
         <StatCard title="Pending Tasks" value={totalTasks - completedTasks} desc="Awaiting completion" color="purple" />
       </div>
+
+      {attentionItems.length > 0 && (
+        <div className="content-block" style={{ borderLeft: '3px solid var(--priority-high)', marginBottom: 24 }}>
+          <div className="block-header">
+            <h3 className="block-title" style={{ color: 'var(--priority-high)' }}>
+              <i className="fa-solid fa-triangle-exclamation" style={{ marginRight: 8 }}></i>
+              Attention Required ({attentionItems.length})
+            </h3>
+          </div>
+          <table className="project-list-table">
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>Type</th>
+                <th>Project</th>
+                <th>Deadline</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {attentionItems.map(item => (
+                <tr
+                  key={`${item.type}-${item.id}`}
+                  className="project-row"
+                  onClick={() => navigate(`/projects/${item.projectId}`)}
+                >
+                  <td><strong>{item.label}</strong></td>
+                  <td>
+                    <span style={{ fontSize: 11, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 1 }}>
+                      {item.type}
+                    </span>
+                  </td>
+                  <td>{item.projectName || '–'}</td>
+                  <td>{new Date(item.deadline).toLocaleDateString()}</td>
+                  <td><DeadlineBadge deadline={item.deadline} /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       <div className="dashboard-split">
         <div className="content-block">
@@ -92,7 +157,12 @@ export default function Dashboard() {
                       <div className="progress-container"><div className="progress-bar" style={{ width: '0%' }}></div></div>
                       <span className="progress-text">–</span>
                     </td>
-                    <td>{p.deadline ? new Date(p.deadline).toLocaleDateString() : '–'}</td>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span>{p.deadline ? new Date(p.deadline).toLocaleDateString() : '–'}</span>
+                        <DeadlineBadge deadline={p.deadline} />
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>

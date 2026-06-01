@@ -13,38 +13,54 @@ export default function AddClientModal({ open, onClose, onAdded }) {
     setSuccess('')
     setLoading(true)
 
-    const { data: { session } } = await supabase.auth.getSession()
-
-    const res = await fetch(
-      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-user`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
-        },
-        body: JSON.stringify({
-          email: form.email,
-          name: form.name,
-          role: 'client',
-          company: form.company,
-        }),
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        setError('Not authenticated. Please refresh and try again.')
+        setLoading(false)
+        return
       }
-    )
 
-    const json = await res.json()
-    setLoading(false)
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+      const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
-    if (!res.ok || json.error) {
-      setError(json.error || 'Failed to create client')
-      return
+      const res = await fetch(
+        `${supabaseUrl}/functions/v1/create-user`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+            'apikey': anonKey,
+          },
+          body: JSON.stringify({
+            email: form.email,
+            name: form.name,
+            role: 'client',
+            company: form.company,
+          }),
+        }
+      )
+
+      const json = await res.json()
+
+      if (!res.ok || json.error) {
+        console.error('create-user error:', res.status, json)
+        setError(json.error || `Server error (${res.status})`)
+        setLoading(false)
+        return
+      }
+
+      setSuccess(`✓ ${form.name} registered. A password-setup email has been sent to ${form.email}.`)
+      setForm({ name: '', company: '', email: '' })
+      onAdded?.()
+      setTimeout(() => { setSuccess(''); onClose() }, 3000)
+    } catch (err) {
+      console.error('AddClientModal unexpected error:', err)
+      setError(err.message || 'Unexpected error. Please try again.')
     }
 
-    setSuccess(`✓ ${form.name} registered. A password-setup email has been sent to ${form.email}.`)
-    setForm({ name: '', company: '', email: '' })
-    onAdded?.()
-    setTimeout(() => { setSuccess(''); onClose() }, 3000)
+    setLoading(false)
   }
 
   if (!open) return null

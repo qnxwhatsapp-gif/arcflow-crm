@@ -39,6 +39,7 @@ export default function Dashboard() {
         }))
         setRecentComments(withNames)
       })
+      .catch(err => { console.error('Failed to load comments:', err); setRecentComments([]) })
   }, [projects])
 
   if (loading) return <div style={{ color: 'var(--text-muted)' }}>Loading dashboard...</div>
@@ -154,8 +155,8 @@ export default function Dashboard() {
                     <td>{p.lead?.name}</td>
                     <td><span className={`phase-badge phase-${p.phase.toLowerCase()}`}>{p.phase}</span></td>
                     <td>
-                      <div className="progress-container"><div className="progress-bar" style={{ width: '0%' }}></div></div>
-                      <span className="progress-text">–</span>
+                      <div className="progress-container"><div className="progress-bar" style={{ width: `${p.tasks && p.tasks.length > 0 ? Math.round((p.tasks.filter(t => t.status === 'completed').length / p.tasks.length) * 100) : 0}%` }}></div></div>
+                      <span className="progress-text">{p.tasks && p.tasks.length > 0 ? Math.round((p.tasks.filter(t => t.status === 'completed').length / p.tasks.length) * 100) : 0}%</span>
                     </td>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>

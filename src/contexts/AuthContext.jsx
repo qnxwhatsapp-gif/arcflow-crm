@@ -38,12 +38,26 @@ export function AuthProvider({ children }) {
     })
   }
 
+  async function signInWithEmail(email, password) {
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    return { error }
+  }
+
+  async function signUpWithEmail(email, password, name) {
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { full_name: name } },
+    })
+    return { error }
+  }
+
   async function signOut() {
     await supabase.auth.signOut()
   }
 
   return (
-    <AuthContext.Provider value={{ session, profile, signInWithGoogle, signOut, fetchProfile }}>
+    <AuthContext.Provider value={{ session, profile, signInWithGoogle, signInWithEmail, signUpWithEmail, signOut, fetchProfile }}>
       {children}
     </AuthContext.Provider>
   )

@@ -1,5 +1,7 @@
+// src/components/kanban/TaskCard.jsx
+import DeadlineBadge from '../ui/DeadlineBadge'
+
 export default function TaskCard({ task, canEdit, onDragStart, onClick }) {
-  const isOverdue = task.status !== 'completed' && task.deadline && new Date(task.deadline) < new Date()
   const subtasks = task.subtasks || []
   const completedSubs = subtasks.filter(s => s.status === 'completed').length
 
@@ -14,7 +16,15 @@ export default function TaskCard({ task, canEdit, onDragStart, onClick }) {
         <span className={`priority-tag priority-${(task.priority || 'medium').toLowerCase()}`}>{task.priority}</span>
         <span className={`phase-badge phase-${(task.phase || 'sd').toLowerCase()}`} style={{ fontSize: 9, padding: '2px 4px' }}>{task.phase}</span>
       </div>
+
       <div className="card-title">{task.title}</div>
+
+      {task.status !== 'completed' && task.deadline && (
+        <div style={{ marginTop: 4 }}>
+          <DeadlineBadge deadline={task.deadline} />
+        </div>
+      )}
+
       {task.description && <div className="card-desc">{task.description}</div>}
 
       {subtasks.length > 0 && (
@@ -30,8 +40,8 @@ export default function TaskCard({ task, canEdit, onDragStart, onClick }) {
       )}
 
       <div className="card-footer" style={{ marginTop: 10 }}>
-        <div className={`card-deadline${isOverdue ? ' overdue' : ''}`}>
-          <i className={`fa-solid ${isOverdue ? 'fa-triangle-exclamation' : 'fa-calendar-days'}`}></i>
+        <div className="card-deadline">
+          <i className="fa-solid fa-calendar-days"></i>
           <span>{task.deadline ? new Date(task.deadline).toLocaleDateString([], { month: 'short', day: 'numeric' }) : '–'}</span>
         </div>
         {task.assignee && (

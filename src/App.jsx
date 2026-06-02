@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
+import { supabase } from './lib/supabase'
 import { PermissionsProvider } from './contexts/PermissionsContext'
 import Login from './pages/Login'
 import Pending from './pages/Pending'
@@ -18,13 +19,16 @@ function AppShell() {
   const navigate = useNavigate()
   const openCreateProjectRef = useRef(null)
 
-  // Detect Supabase recovery session from URL hash and redirect to reset page
+  // Listen for Supabase PASSWORD_RECOVERY event — fires AFTER the token is processed
+  // Do NOT detect the hash manually (that strips it before Supabase can use it)
   useEffect(() => {
-    const hash = window.location.hash
-    if (hash.includes('type=recovery')) {
-      navigate('/reset-password', { replace: true })
-    }
-  }, [])
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        navigate('/reset-password', { replace: true })
+      }
+    })
+    return () => subscription.unsubscribe()
+  }, [navigate])
 
   function handleNavbarAction(action) {
     if (action === 'createProject') openCreateProjectRef.current?.()

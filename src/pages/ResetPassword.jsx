@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 
@@ -8,6 +8,14 @@ export default function ResetPassword() {
   const [confirm, setConfirm] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [hasSession, setHasSession] = useState(null) // null = checking
+
+  // Verify a recovery session actually exists before showing the form
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setHasSession(!!session)
+    })
+  }, [])
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -28,6 +36,47 @@ export default function ResetPassword() {
     } else {
       navigate('/dashboard')
     }
+  }
+
+  // Still checking session
+  if (hasSession === null) {
+    return (
+      <div className="login-container">
+        <div className="login-card">
+          <div className="brand-header">
+            <div className="brand-logo-icon"><span>A</span></div>
+            <h1 className="brand-title">ARCFLOW</h1>
+            <p className="brand-subtitle">SET NEW PASSWORD</p>
+          </div>
+          <p style={{ textAlign: 'center', color: 'var(--text-muted)', marginTop: 24 }}>Verifying reset link…</p>
+        </div>
+      </div>
+    )
+  }
+
+  // No session — link expired or page was refreshed
+  if (!hasSession) {
+    return (
+      <div className="login-container">
+        <div className="login-card">
+          <div className="brand-header">
+            <div className="brand-logo-icon"><span>A</span></div>
+            <h1 className="brand-title">ARCFLOW</h1>
+            <p className="brand-subtitle">SET NEW PASSWORD</p>
+          </div>
+          <div style={{ textAlign: 'center', padding: '24px 0' }}>
+            <i className="fa-solid fa-link-slash" style={{ fontSize: 32, color: 'var(--priority-high)', marginBottom: 12, display: 'block' }}></i>
+            <p style={{ color: 'var(--text-secondary)', fontSize: 14, marginBottom: 16 }}>
+              This reset link has expired or already been used.<br />
+              Please request a new one.
+            </p>
+            <button className="login-btn" style={{ width: '100%' }} onClick={() => navigate('/')}>
+              Back to Sign In
+            </button>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (

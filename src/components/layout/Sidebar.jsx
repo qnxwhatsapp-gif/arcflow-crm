@@ -46,6 +46,14 @@ export default function Sidebar() {
             </NavLink>
           </li>
         )}
+        {profile?.role === 'principal' && (
+          <li className="nav-item">
+            <NavLink className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`} to="/reports">
+              <i className="fa-solid fa-chart-bar"></i>
+              <span>Reports</span>
+            </NavLink>
+          </li>
+        )}
       </ul>
 
       <div className="logout-btn-container">

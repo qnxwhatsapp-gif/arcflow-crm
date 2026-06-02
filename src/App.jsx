@@ -9,6 +9,7 @@ import Projects from './pages/Projects'
 import ProjectDetail from './pages/ProjectDetail'
 import Team from './pages/Team'
 import ResetPassword from './pages/ResetPassword'
+import Reports from './pages/Reports'
 import Sidebar from './components/layout/Sidebar'
 import TopNavbar from './components/layout/TopNavbar'
 
@@ -55,6 +56,7 @@ function AppShell() {
               <Route path="/projects" element={<Projects registerOpenModal={cb => { openCreateProjectRef.current = cb }} />} />
               <Route path="/projects/:projectId" element={<ProjectDetail />} />
               <Route path="/team" element={<Team />} />
+              <Route path="/reports" element={<Reports />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Routes>

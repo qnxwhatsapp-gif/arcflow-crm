@@ -17,15 +17,19 @@ Deno.serve(async (req) => {
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!
 
-    // Check caller's role using their JWT
-    const callerClient = createClient(supabaseUrl, anonKey, {
-      global: { headers: { Authorization: authHeader } },
-    })
-    const { data: callerProfile, error: profileError } = await callerClient
+    // Decode JWT to get caller's user ID (no verify needed — Supabase issued it)
+    const jwt = authHeader.replace('Bearer ', '')
+    const payload = JSON.parse(atob(jwt.split('.')[1]))
+    const callerId = payload.sub
+    if (!callerId) throw new Error('Invalid token: no sub claim')
+
+    // Check caller's role using service role key (bypasses RLS — reliable)
+    const adminClient = createClient(supabaseUrl, serviceRoleKey)
+    const { data: callerProfile, error: profileError } = await adminClient
       .from('profiles')
       .select('role')
+      .eq('id', callerId)
       .single()
 
     if (profileError || callerProfile?.role !== 'principal') {

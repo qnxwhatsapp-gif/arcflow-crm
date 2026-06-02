@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest'
 import { computeWorkSummary } from './generateProjectPdf'
 
+// Note: generateProjectPdf (the PDF builder) is not unit-tested here because it requires
+// browser APIs (jsPDF, canvas.toDataURL, doc.save). Only the pure computeWorkSummary
+// helper is covered.
 describe('computeWorkSummary', () => {
   it('sums hours correctly (hours unit)', () => {
     const logs = [

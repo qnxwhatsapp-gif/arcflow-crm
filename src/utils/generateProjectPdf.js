@@ -28,7 +28,7 @@ export function computeWorkSummary(workLogs) {
  * @param {Object} project
  * @param {Array} tasks
  * @param {Array} workLogs
- * @param {Array} comments - last 5 comments, each with { author: { name }, created_at, text }
+ * @param {Array} comments - comment records with { author: { name }, created_at, text }; function uses the first 5
  * @param {HTMLCanvasElement|null} donutCanvas - task completion donut chart
  */
 export function generateProjectPdf(project, tasks, workLogs, comments, donutCanvas) {

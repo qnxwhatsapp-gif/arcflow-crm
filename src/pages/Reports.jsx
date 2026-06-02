@@ -1,5 +1,5 @@
 // src/pages/Reports.jsx
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { Chart } from 'chart.js/auto'
 import { supabase } from '../lib/supabase'
@@ -7,7 +7,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { useProjects } from '../hooks/useProjects'
 import DeadlineBadge from '../components/ui/DeadlineBadge'
 import { computePortfolioStats, generatePortfolioPdf } from '../utils/generatePortfolioPdf'
-import { computeWorkSummary, generateProjectPdf } from '../utils/generateProjectPdf'
+import { computeWorkSummary, generateProjectPdf } from '../utils/generateProjectPdf' // used in ProjectHealthTab (Task 5)
 
 const PHASES = ['SD', 'DD', 'CD', 'CA']
 const fmt = n => `$${Number(n || 0).toLocaleString('en-US')}`
@@ -26,23 +26,26 @@ function PortfolioTab({ projects }) {
   useEffect(() => {
     async function fetchAllTasks() {
       setLoadingTasks(true)
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('tasks')
         .select('id, project_id, status, deadline')
+      if (error) {
+        console.error('Failed to fetch tasks for portfolio:', error)
+      }
       setAllTasks(data || [])
       setLoadingTasks(false)
     }
     fetchAllTasks()
   }, [])
 
+  const stats = useMemo(
+    () => computePortfolioStats(projects, allTasks),
+    [projects, allTasks]
+  )
+
   // Build / rebuild charts when data is ready
   useEffect(() => {
     if (loadingTasks || !donutRef.current || !barRef.current) return
-    const stats = computePortfolioStats(projects, allTasks)
-
-    // Destroy previous instances
-    donutChart.current?.destroy()
-    barChart.current?.destroy()
 
     // Donut — task status breakdown
     donutChart.current = new Chart(donutRef.current, {
@@ -92,11 +95,9 @@ function PortfolioTab({ projects }) {
       donutChart.current?.destroy()
       barChart.current?.destroy()
     }
-  }, [allTasks, projects, loadingTasks])
+  }, [stats, loadingTasks])
 
   if (loadingTasks) return <div style={{ color: 'var(--text-muted)', padding: 20 }}>Loading portfolio data…</div>
-
-  const stats = computePortfolioStats(projects, allTasks)
 
   function handleExport() {
     generatePortfolioPdf(projects, allTasks, {

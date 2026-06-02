@@ -7,7 +7,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { useProjects } from '../hooks/useProjects'
 import DeadlineBadge from '../components/ui/DeadlineBadge'
 import { computePortfolioStats, generatePortfolioPdf } from '../utils/generatePortfolioPdf'
-import { computeWorkSummary, generateProjectPdf } from '../utils/generateProjectPdf' // used in ProjectHealthTab (Task 5)
+import { computeWorkSummary, generateProjectPdf } from '../utils/generateProjectPdf'
 
 const PHASES = ['SD', 'DD', 'CD', 'CA']
 const fmt = n => `$${Number(n || 0).toLocaleString('en-US')}`
@@ -187,7 +187,7 @@ function PortfolioTab({ projects }) {
   )
 }
 
-// ─── Project Health Tab (stub — implemented in Task 5) ─────────────────────
+// ─── Project Health Tab ───────────────────────────────────────────────────
 
 function ProjectHealthTab({ projects }) {
   const [selectedProjectId, setSelectedProjectId] = useState('')
@@ -203,6 +203,7 @@ function ProjectHealthTab({ projects }) {
   // Fetch project-specific data when a project is selected
   useEffect(() => {
     if (!selectedProjectId) return
+    let ignore = false
     setLoading(true)
     setTasks([])
     setWorkLogs([])
@@ -224,14 +225,17 @@ function ProjectHealthTab({ projects }) {
         .order('created_at', { ascending: false })
         .limit(5),
     ]).then(([tasksRes, logsRes, commentsRes]) => {
+      if (ignore) return
       setTasks(tasksRes.data || [])
       setWorkLogs(logsRes.data || [])
       setComments(commentsRes.data || [])
       setLoading(false)
     }).catch(err => {
+      if (ignore) return
       console.error('Failed to fetch project health data:', err)
       setLoading(false)
     })
+    return () => { ignore = true }
   }, [selectedProjectId])
 
   // Build / rebuild donut chart

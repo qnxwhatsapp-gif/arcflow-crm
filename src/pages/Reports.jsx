@@ -204,6 +204,9 @@ function ProjectHealthTab({ projects }) {
   useEffect(() => {
     if (!selectedProjectId) return
     setLoading(true)
+    setTasks([])
+    setWorkLogs([])
+    setComments([])
     Promise.all([
       supabase
         .from('tasks')
@@ -236,6 +239,7 @@ function ProjectHealthTab({ projects }) {
     if (!donutRef.current || !selectedProjectId) return
     const completed = tasks.filter(t => t.status === 'completed').length
     const remaining = tasks.length - completed
+    donutChart.current?.destroy()
     donutChart.current = new Chart(donutRef.current, {
       type: 'doughnut',
       data: {

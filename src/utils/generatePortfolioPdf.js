@@ -6,7 +6,6 @@ import { getDeadlineStatus } from './deadlineStatus'
 const TEAL = '#0d9488'
 const DARK = '#0f172a'
 const LIGHT_ROW = '#f8fafc'
-const PHASES = ['SD', 'DD', 'CD', 'CA']
 
 /**
  * Pure computation — no side effects, fully testable.
@@ -16,7 +15,7 @@ const PHASES = ['SD', 'DD', 'CD', 'CA']
  */
 export function computePortfolioStats(projects, allTasks) {
   const totalValue = projects.reduce((s, p) => s + (p.budget || 0), 0)
-  const activeCount = projects.length
+  const activeCount = projects.length // caller passes only active/relevant projects
 
   const totalTasks = allTasks.length
   const completedTasks = allTasks.filter(t => t.status === 'completed').length
@@ -51,7 +50,7 @@ export function generatePortfolioPdf(projects, allTasks, { donutCanvas, barCanva
   let y = 0
 
   // ── Header band ──────────────────────────────────────────────────────────
-  doc.setFillColor(DARK)
+  doc.setFillColor(15, 23, 42)
   doc.rect(0, 0, W, 22, 'F')
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(16)
